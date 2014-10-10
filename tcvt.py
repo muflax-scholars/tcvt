@@ -42,10 +42,7 @@ import time
 import optparse
 
 def init_color_pairs():
-    for bi, bc in enumerate((curses.COLOR_BLACK, curses.COLOR_RED,
-                             curses.COLOR_GREEN, curses.COLOR_YELLOW,
-                             curses.COLOR_BLUE, curses.COLOR_MAGENTA,
-                             curses.COLOR_CYAN, curses.COLOR_WHITE)):
+    for bi, bc in enumerate([-1] * 8):
         for fi, fc in enumerate((curses.COLOR_WHITE, curses.COLOR_BLACK,
                                  curses.COLOR_RED, curses.COLOR_GREEN,
                                  curses.COLOR_YELLOW, curses.COLOR_BLUE,
@@ -343,6 +340,7 @@ class Terminal:
         self.realscreen.nodelay(1)
         self.realscreen.keypad(1)
         curses.start_color()
+        curses.use_default_colors()
         init_color_pairs()
         self.screen = Columns(self.realscreen, self.columns)
         curses.noecho()
