@@ -1,19 +1,19 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #
 # Tow Column Virtual Terminal.
 #
 # Copyright 2011 Helmut Grohne <helmut@subdivi.de>. All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
-# 
+#
 #    1. Redistributions of source code must retain the above copyright notice,
 #       this list of conditions and the following disclaimer.
-# 
+#
 #    2. Redistributions in binary form must reproduce the above copyright
 #       notice, this list of conditions and the following disclaimer in the
 #       documentation and/or other materials provided with the distribution.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY HELMUT GROHNE ``AS IS'' AND ANY EXPRESS OR
 # IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
 # MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
@@ -24,7 +24,7 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 # The views and conclusions contained in the software and documentation are
 # those of the authors and should not be interpreted as representing official
 # policies, either expressed or implied, of Helmut Grohne.
@@ -71,6 +71,9 @@ class Simple:
 
     def addch(self, char):
         self.screen.addch(char)
+
+    def addstr(self, char):
+        self.screen.addstr(char)
 
     def refresh(self):
         self.screen.refresh()
@@ -171,6 +174,19 @@ class Columns:
         else:
             self.curwin.addch(self.curypos, self.curxpos, char, self.attrs)
             self.xpos += 1
+
+    def addstr(self, char):
+        if self.xpos == self.columnwidth - 1:
+            self.curwin.insstr(self.curypos, self.curxpos, char, self.attrs)
+            if self.ypos + 1 == 2 * self.height:
+                self.scroll()
+                self.move(self.ypos, 0)
+            else:
+                self.move(self.ypos + 1, 0)
+        else:
+            self.curwin.addstr(self.curypos, self.curxpos, char, self.attrs)
+            self.xpos += 1
+
 
     def refresh(self):
         self.screen.refresh()
@@ -295,9 +311,11 @@ def compose_dicts(dct1, dct2):
     return result
 
 simple_characters = bytearray(
-        b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
-        b'0123456789@:~$ .#!/_(),[]=-+*\'"|<>%&\\?;`^{}' +
-        b'\xb4\xb6\xb7\xc3\xc4\xd6\xdc\xe4\xe9\xfc\xf6')
+    b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+    b'0123456789@:~$ .#!/_(),[]=-+*\'"|<>%&\\?;`^{}' +
+    b'\xb4\xb6\xb7\xe4\xe9\xfc\xf6'
+
+)
 
 class Terminal:
     def __init__(self, acsc, columns):
@@ -334,6 +352,10 @@ class Terminal:
     def addch(self, char):
         self.lastchar = char
         self.screen.addch(char)
+
+    def addstr(self, char):
+        self.lastchar = char
+        self.screen.addstr(char)
 
     def start(self):
         self.realscreen = curses.initscr()
@@ -481,6 +503,25 @@ class Terminal:
             func()
         elif char in simple_characters:
             self.addch(char)
+
+        elif char >= 0xc2 and char <= 0xdf:
+            self.multi_byte = ([char], 1)
+        elif char >= 0xe0 and char <= 0xef:
+            self.multi_byte = ([char], 2)
+        elif char >= 0xf0 and char <= 0xf4:
+            self.multi_byte = ([char], 3)
+
+        elif char >= 0x80 and char <= 0xbf:
+            if self.multi_byte:
+                mult, n = self.multi_byte
+                mult.append(char)
+
+                if n > 1:
+                    self.multi_byte = (mult, n-1)
+                else:
+                    s = bytearray(mult).decode("utf-8")
+                    self.addstr(s)
+                    self.multi_byte = None
         elif char == 0x1b:
             self.mode = (self.feed_esc,)
         elif char == ord(b'\b'):
@@ -708,6 +749,7 @@ def main():
                     break
                 if not data:
                     break
+
                 for char in bytearray(data):
                     if "TCVT_DEVEL" in os.environ:
                         t.feed(char)
