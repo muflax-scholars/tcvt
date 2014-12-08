@@ -312,8 +312,8 @@ def compose_dicts(dct1, dct2):
 
 simple_characters = bytearray(
     b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
-    b'0123456789@:~$ .#!/_(),[]=-+*\'"|<>%&\\?;`^{}' +
-    b'\xb4\xb6\xb7\xe4\xe9\xfc\xf6'
+    b'0123456789@:~$ .#!/_(),[]=-+*\'"|<>%&\\?;`^{}'
+    # b'\xb4\xb6\xb7\xe9'
 
 )
 
